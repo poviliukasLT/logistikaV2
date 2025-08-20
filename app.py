@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-st.title("Logistikos analizė V2(2025-08-20)")
+st.title("Logistikos analizė V2.1(2025-08-20)")
 
 uploaded_file1 = st.file_uploader("Įkelk VENIPAK .xlsx failą", type=["xlsx"])
 uploaded_file2 = st.file_uploader("Įkelk RIVILE .xlsx failą", type=["xlsx"])
@@ -102,6 +102,8 @@ if uploaded_file1 and uploaded_file2:
             worksheet.set_column(col_map["Logistika %"], col_map["Logistika %"], 12, percent_format)
 
             row_count = len(df_main)
+
+            # Logistika > 5% raudona
             worksheet.conditional_format(1, 5, row_count, 5, {
                 'type': 'cell',
                 'criteria': '>',
@@ -109,6 +111,7 @@ if uploaded_file1 and uploaded_file2:
                 'format': red_text
             })
 
+            # Pardavimas Be PVM = 0 raudona
             worksheet.conditional_format(1, 4, row_count, 4, {
                 'type': 'cell',
                 'criteria': '==',
@@ -116,6 +119,15 @@ if uploaded_file1 and uploaded_file2:
                 'format': red_text
             })
 
+            # Menedžeris = NEATPAŽINTAS raudona
+            worksheet.conditional_format(1, 3, row_count, 3, {
+                'type': 'text',
+                'criteria': 'containing',
+                'value': 'NEATPAŽINTAS',
+                'format': red_text
+            })
+
+            # Sumos pabaigoje
             summary_row = len(df_summary) + 1
             total_sales = summary["Pardavimas Be PVM (suma)"].sum()
             total_logistics = summary["Logistikos išlaidos"].sum()
