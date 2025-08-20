@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-st.title("Logistikos analizė V2.2.1")
+st.title("Logistikos analizė V2(2025-08-20)")
 
 uploaded_file1 = st.file_uploader("Įkelk VENIPAK .xlsx failą", type=["xlsx"])
 uploaded_file2 = st.file_uploader("Įkelk RIVILE .xlsx failą", type=["xlsx"])
@@ -17,10 +17,11 @@ if uploaded_file1 and uploaded_file2:
     df1_subset = df1[["Kl.Siuntos Nr.", "Kaina, EUR", "Gavėjas"]].copy()
     df1_subset["Kaina, EUR su priemoka"] = df1_subset["Kaina, EUR"] * 1.3
 
-    df2_subset = df2[["Dokumento Nr.", "Menedžeris", "Suma Be PVM"]].copy()
+    df2_subset = df2[["DOC_NO", "LOCATION", "TOTAL"]].copy()
     df2_subset = df2_subset.rename(columns={
-        "Dokumento Nr.": "Kl.Siuntos Nr.",
-        "Suma Be PVM": "Pardavimas Be PVM"
+        "DOC_NO": "Kl.Siuntos Nr.",
+        "LOCATION": "Menedžeris",
+        "TOTAL": "Pardavimas Be PVM"
     })
 
     df_merged = pd.merge(df1_subset, df2_subset, on="Kl.Siuntos Nr.", how="left")
@@ -76,12 +77,10 @@ if uploaded_file1 and uploaded_file2:
     def convert_df_with_summary(df_main, df_summary, venipak_raw, rivile_raw):
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            # 1. Rezultatai pirmi
             df_main.to_excel(writer, index=False, sheet_name='Rezultatai', startrow=0)
             startcol = 8
             df_summary.to_excel(writer, index=False, sheet_name='Rezultatai', startcol=startcol, startrow=0)
 
-            # 2. Originalūs duomenys
             venipak_raw.to_excel(writer, index=False, sheet_name='VENIPAK duomenys')
             rivile_raw.to_excel(writer, index=False, sheet_name='RIVILE duomenys')
 
@@ -93,18 +92,15 @@ if uploaded_file1 and uploaded_file2:
             bold_format = workbook.add_format({'bold': True, 'num_format': '0.00'})
             red_text = workbook.add_format({'font_color': 'red'})
 
-            # Formatavimas pagrindinei lentelei
             worksheet.set_column(1, 1, 18, number_format)    # B
             worksheet.set_column(4, 4, 18, number_format)    # E
             worksheet.set_column(5, 5, 12, percent_format)   # F
 
-            # Formatavimas suvestinei
             col_map = {col: startcol + i for i, col in enumerate(df_summary.columns)}
             worksheet.set_column(col_map["Pardavimas Be PVM (suma)"], col_map["Pardavimas Be PVM (suma)"], 18, number_format)
             worksheet.set_column(col_map["Logistikos išlaidos"], col_map["Logistikos išlaidos"], 18, number_format)
             worksheet.set_column(col_map["Logistika %"], col_map["Logistika %"], 12, percent_format)
 
-            # Sąlyginiai formatavimai
             row_count = len(df_main)
             worksheet.conditional_format(1, 5, row_count, 5, {
                 'type': 'cell',
@@ -120,7 +116,6 @@ if uploaded_file1 and uploaded_file2:
                 'format': red_text
             })
 
-            # Suvestinės sumos
             summary_row = len(df_summary) + 1
             total_sales = summary["Pardavimas Be PVM (suma)"].sum()
             total_logistics = summary["Logistikos išlaidos"].sum()
